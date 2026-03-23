@@ -1,0 +1,21 @@
+"""Sample Python package for WikiCode integration tests.
+
+This package provides a simple calculator with data models and utilities.
+It is intentionally small but realistic — covering classes, functions,
+imports, type annotations, and docstrings.
+"""
+
+from python_pkg.calculator import Calculator, add, subtract, multiply, divide
+from python_pkg.models import CalculationResult, Operation
+
+__all__ = [
+    "Calculator",
+    "add",
+    "subtract",
+    "multiply",
+    "divide",
+    "CalculationResult",
+    "Operation",
+]
+
+__version__ = "1.0.0"

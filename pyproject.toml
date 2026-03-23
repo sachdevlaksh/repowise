@@ -1,0 +1,87 @@
+[tool.uv.workspace]
+members = [
+    "packages/core",
+    "packages/cli",
+    "packages/server",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=8,<9",
+    "pytest-asyncio>=0.23,<1",
+    "pytest-snapshot>=0.9,<1",
+    "respx>=0.21,<1",
+    "time-machine>=2.14,<3",
+    "ruff>=0.6,<1",
+    "mypy>=1.11,<2",
+    "types-networkx>=3.3,<4",
+    "httpx>=0.27,<1",
+]
+
+# ---------------------------------------------------------------------------
+# Ruff — linter + formatter
+# ---------------------------------------------------------------------------
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "SIM", # flake8-simplify
+    "RUF", # ruff-specific rules
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["wikicode"]
+
+# ---------------------------------------------------------------------------
+# mypy — strict type checking
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+warn_unused_ignores = true
+show_error_codes = true
+namespace_packages = true
+explicit_package_bases = true
+
+# Per-module overrides for third-party packages without stubs
+[[tool.mypy.overrides]]
+module = [
+    "tree_sitter",
+    "tree_sitter_python",
+    "tree_sitter_typescript",
+    "tree_sitter_go",
+    "tree_sitter_rust",
+    "tree_sitter_java",
+    "tree_sitter_cpp",
+    "lancedb",
+    "pgvector",
+    "litellm",
+    "apscheduler.*",
+    "networkx",
+    "pathspec",
+    "structlog",
+    "mcp",
+]
+ignore_missing_imports = true
+
+# ---------------------------------------------------------------------------
+# pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+pythonpath = ["."]
