@@ -237,7 +237,8 @@ class LanceDBVectorStore(VectorStore):
             await self._table.merge_insert("page_id").when_matched_update_all().when_not_matched_insert_all().execute([row])  # type: ignore[union-attr]
         except AttributeError:
             # Fallback for older LanceDB versions: delete + add
-            await self._table.delete(f"page_id = '{page_id}'")  # type: ignore[union-attr]
+            safe_id = page_id.replace("'", "''")
+            await self._table.delete(f"page_id = '{safe_id}'")  # type: ignore[union-attr]
             await self._table.add([row])  # type: ignore[union-attr]
 
     async def search(self, query: str, limit: int = 10) -> list[SearchResult]:
@@ -271,7 +272,8 @@ class LanceDBVectorStore(VectorStore):
     async def delete(self, page_id: str) -> None:
         await self._ensure_connected()
         if self._table is not None:
-            await self._table.delete(f"page_id = '{page_id}'")  # type: ignore[union-attr]
+            safe_id = page_id.replace("'", "''")
+            await self._table.delete(f"page_id = '{safe_id}'")  # type: ignore[union-attr]
 
     async def close(self) -> None:
         self._table = None

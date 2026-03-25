@@ -24,7 +24,7 @@ from wikicode.cli.helpers import console, resolve_repo_path
 def mcp_command(path: str | None, transport: str, port: int) -> None:
     """Start the MCP server for editor integration.
 
-    Exposes 13 tools for querying the WikiCode wiki via the MCP protocol.
+    Exposes 16 tools for querying the WikiCode wiki via the MCP protocol.
     Supports both stdio (for Claude Code, Cursor, Cline) and SSE transports.
 
     Examples:

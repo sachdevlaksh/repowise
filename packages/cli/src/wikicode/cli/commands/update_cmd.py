@@ -84,7 +84,7 @@ def update_command(
     from wikicode.core.generation import ContextAssembler, GenerationConfig, PageGenerator
     from wikicode.core.ingestion import ASTParser, FileTraverser, GraphBuilder
 
-    provider = resolve_provider(provider_name, model)
+    provider = resolve_provider(provider_name, model, repo_path=repo_path)
     config = GenerationConfig()
 
     # Read exclude patterns from config (set during init or via web UI)

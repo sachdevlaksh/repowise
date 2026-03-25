@@ -59,11 +59,44 @@ def _search_fulltext(repo_path, query: str, limit: int) -> None:
 
 def _search_semantic(repo_path, query: str, limit: int) -> None:
     async def _run():
+        from pathlib import Path
+
         from wikicode.core.persistence import InMemoryVectorStore, MockEmbedder
 
-        store = InMemoryVectorStore(embedder=MockEmbedder())
-        results = await store.search(query, limit=limit)
-        await store.close()
+        # Try LanceDB first (populated during wikicode init)
+        lance_dir = Path(repo_path) / ".wikicode" / "lancedb"
+        if lance_dir.exists():
+            try:
+                from wikicode.core.persistence.vector_store import LanceDBVectorStore
+
+                from wikicode.cli.commands.init_cmd import _resolve_embedder
+
+                embedder_name = _resolve_embedder(None)
+                if embedder_name == "gemini":
+                    from wikicode.core.persistence.gemini_embedder import GeminiEmbedder
+
+                    embedder = GeminiEmbedder()
+                elif embedder_name == "openai":
+                    from wikicode.core.persistence.openai_embedder import OpenAIEmbedder
+
+                    embedder = OpenAIEmbedder()
+                else:
+                    embedder = MockEmbedder()
+                store = LanceDBVectorStore(str(lance_dir), embedder=embedder)
+                results = await store.search(query, limit=limit)
+                await store.close()
+                return results
+            except Exception:
+                pass
+
+        # Fallback to FTS
+        from wikicode.core.persistence import FullTextSearch, create_engine
+
+        url = get_db_url_for_repo(repo_path)
+        engine = create_engine(url)
+        fts = FullTextSearch(engine)
+        results = await fts.search(query, limit=limit)
+        await engine.dispose()
         return results
 
     results = run_async(_run())

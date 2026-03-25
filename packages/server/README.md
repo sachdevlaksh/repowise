@@ -11,7 +11,7 @@ FastAPI REST API, webhook handlers, MCP server, and background job scheduler for
 | Component | Description |
 |-----------|-------------|
 | **REST API** | FastAPI application with full CRUD for repos, pages, symbols, jobs, git analytics, dead code |
-| **MCP Server** | 13 MCP tools for AI coding assistants (Claude Code, Cursor, Cline) |
+| **MCP Server** | 16 MCP tools for AI coding assistants (Claude Code, Cursor, Cline) |
 | **Webhooks** | GitHub and GitLab push event handlers — trigger incremental updates automatically |
 | **Scheduler** | APScheduler background jobs — polling fallback, stale page decay, periodic re-sync |
 
@@ -153,7 +153,7 @@ Job progress events (`JobProgressEvent`) carry: `event` type, `file` currently b
 
 ## MCP Server
 
-WikiCode exposes 13 MCP tools for AI coding assistants. Start the MCP server via:
+WikiCode exposes 16 MCP tools for AI coding assistants. Start the MCP server via:
 
 ```bash
 wikicode mcp                          # stdio transport (Claude Code, Cursor, Cline)
@@ -175,6 +175,9 @@ wikicode mcp --transport sse          # SSE transport on port 7338
 | `get_stale_pages` | Pages whose source has changed since last generation |
 | `get_dead_code` | Dead code findings for a file or the whole repo |
 | `get_git_summary` | Recent commit activity and change patterns |
+| `get_decisions` | Architectural decision records for the codebase |
+| `get_why` | Answer "why is X built this way?" using decisions and docs |
+| `get_decision_health` | Stale decisions, ungoverned hotspots, proposed decisions |
 
 **Claude Code / Cursor / Cline setup** — add to your MCP config:
 

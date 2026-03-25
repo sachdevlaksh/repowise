@@ -115,13 +115,27 @@ def export_command(
                     .replace('"', "")
                 )
                 filepath = out / f"{safe_name}.html"
+                # Render markdown to HTML if a renderer is available
+                try:
+                    import markdown as _md
+
+                    body_html = _md.markdown(
+                        page.content, extensions=["fenced_code", "tables"]
+                    )
+                except ImportError:
+                    try:
+                        import mistune  # type: ignore[import-untyped]
+
+                        body_html = mistune.html(page.content)
+                    except ImportError:
+                        body_html = f"<pre>{page.content}</pre>"
                 html = (
                     "<!DOCTYPE html>\n<html>\n<head>\n"
                     f"<title>{page.title}</title>\n"
                     '<meta charset="utf-8">\n'
                     "</head>\n<body>\n"
                     f"<h1>{page.title}</h1>\n"
-                    f"<pre>{page.content}</pre>\n"
+                    f"{body_html}\n"
                     "</body>\n</html>"
                 )
                 filepath.write_text(html, encoding="utf-8")

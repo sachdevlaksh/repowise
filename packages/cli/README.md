@@ -336,7 +336,7 @@ wikicode mcp /path/to/repo
 wikicode mcp --transport sse
 ```
 
-Exposes 13 MCP tools for querying wiki pages, symbols, the dependency graph, git analytics, ownership data, hotspots, and dead code findings.
+Exposes 16 MCP tools for querying wiki pages, symbols, the dependency graph, git analytics, ownership data, hotspots, dead code findings, and decision intelligence.
 
 **Claude Code setup** — add to `~/.claude/settings.json`:
 

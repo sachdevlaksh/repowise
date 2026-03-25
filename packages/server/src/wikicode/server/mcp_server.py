@@ -1,4 +1,4 @@
-"""WikiCode MCP Server — 13 tools for AI coding assistants.
+"""WikiCode MCP Server — 16 tools for AI coding assistants.
 
 Exposes the full WikiCode wiki as queryable tools via the MCP protocol.
 Supports both stdio transport (Claude Code, Cursor, Cline) and SSE transport
@@ -46,6 +46,40 @@ _fts: Any = None
 _repo_path: str | None = None
 
 
+def _resolve_embedder():
+    """Resolve embedder from WIKICODE_EMBEDDER env var or .wikicode/config.yaml."""
+    name = os.environ.get("WIKICODE_EMBEDDER", "").lower()
+    if not name and _repo_path:
+        try:
+            from pathlib import Path
+
+            cfg_path = Path(_repo_path) / ".wikicode" / "config.yaml"
+            if cfg_path.exists():
+                import yaml
+
+                cfg = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
+                name = (cfg.get("embedder") or "").lower()
+        except Exception:
+            pass
+    if name == "gemini":
+        try:
+            from wikicode.core.persistence.gemini_embedder import GeminiEmbedder
+
+            dims = int(os.environ.get("WIKICODE_EMBEDDING_DIMS", "768"))
+            return GeminiEmbedder(output_dimensionality=dims)
+        except Exception:
+            pass
+    if name == "openai":
+        try:
+            from wikicode.core.persistence.openai_embedder import OpenAIEmbedder
+
+            model = os.environ.get("WIKICODE_EMBEDDING_MODEL", "text-embedding-3-small")
+            return OpenAIEmbedder(model=model)
+        except Exception:
+            pass
+    return MockEmbedder()
+
+
 @asynccontextmanager
 async def _lifespan(server: FastMCP):
     """Initialize DB engine, session factory, vector store, FTS on startup."""
@@ -55,13 +89,25 @@ async def _lifespan(server: FastMCP):
         "WIKICODE_DATABASE_URL", "sqlite+aiosqlite:///wikicode.db"
     )
 
-    # If a repo path was configured, try .wikicode/wikicode.db
+    # If a repo path was configured, try .wikicode/wiki.db
     if _repo_path:
         from pathlib import Path
+        import logging as _logging
 
+        _log = _logging.getLogger("wikicode.mcp")
         wikicode_dir = Path(_repo_path) / ".wikicode"
+        if not wikicode_dir.exists():
+            _log.warning(
+                "No .wikicode directory at %s — run 'wikicode init' first",
+                _repo_path,
+            )
+        elif not (wikicode_dir / "wiki.db").exists():
+            _log.warning(
+                "No wiki.db in %s — run 'wikicode init' to generate the wiki",
+                wikicode_dir,
+            )
         if wikicode_dir.exists():
-            db_path = wikicode_dir / "wikicode.db"
+            db_path = wikicode_dir / "wiki.db"
             if db_path.exists():
                 db_url = f"sqlite+aiosqlite:///{db_path.as_posix()}"
 
@@ -79,7 +125,8 @@ async def _lifespan(server: FastMCP):
     _fts = FullTextSearch(engine)
     await _fts.ensure_index()
 
-    embedder = MockEmbedder()
+    # Resolve real embedder from env/config instead of always using MockEmbedder
+    embedder = _resolve_embedder()
     _vector_store = InMemoryVectorStore(embedder=embedder)
 
     # Try to load LanceDB if available
@@ -735,7 +782,7 @@ async def get_file_history(
             "co_change_partners": [
                 {
                     "file_path": p.get("file_path", p.get("path", "")),
-                    "co_change_count": p.get("count", 0),
+                    "co_change_count": p.get("co_change_count", p.get("count", 0)),
                 }
                 for p in co_change_partners
             ],
@@ -926,7 +973,7 @@ async def get_co_changes(
             return {"error": f"No git metadata found for '{file_path}'"}
 
         partners = json.loads(meta.co_change_partners_json)
-        filtered = [p for p in partners if p.get("count", 0) >= min_count]
+        filtered = [p for p in partners if p.get("co_change_count", p.get("count", 0)) >= min_count]
 
         # Check if partners have import relationships
         partner_paths = [p.get("file_path", p.get("path", "")) for p in filtered]
@@ -979,7 +1026,7 @@ async def get_co_changes(
 async def get_dead_code(
     repo: str | None = None,
     kind: str | None = None,
-    min_confidence: float = 0.6,
+    min_confidence: float = 0.5,
     safe_only: bool = False,
     limit: int = 20,
 ) -> dict:
@@ -1151,9 +1198,11 @@ async def get_why(query: str, repo: str | None = None) -> dict:
     async with get_session(_session_factory) as session:
         repository = await _get_repo(session, repo)
 
-        # Keyword match on decision title and body
+        # Keyword match on decision title and body (include proposed —
+        # auto-extracted decisions start as "proposed" and would otherwise
+        # be invisible to this tool)
         all_decisions = await _list_decisions(
-            session, repository.id, include_proposed=False, limit=200
+            session, repository.id, include_proposed=True, limit=200
         )
 
     # Score decisions by keyword relevance

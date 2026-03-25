@@ -1,6 +1,6 @@
 """Unit tests for WikiCode MCP server tools.
 
-Tests all 13 MCP tools using an in-memory SQLite database with pre-populated
+Tests all 16 MCP tools using an in-memory SQLite database with pre-populated
 test data, mirroring the conftest pattern from the REST API tests.
 """
 
@@ -845,9 +845,9 @@ async def test_get_dead_code(setup_mcp):
     result = await get_dead_code()
     assert result["summary"]["total_findings"] == 3
     assert result["summary"]["safe_to_delete_count"] == 2
-    # Default min_confidence=0.6, so dc3 (0.5) is excluded from findings
+    # Default min_confidence=0.5, so all findings at >= 0.5 are included
     findings = result["findings"]
-    assert len(findings) == 2
+    assert len(findings) == 3
     assert findings[0]["confidence"] >= findings[1]["confidence"]  # sorted desc
 
 
