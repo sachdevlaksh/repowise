@@ -179,6 +179,7 @@ class GraphEdge(Base):
     source_node_id: Mapped[str] = mapped_column(Text, nullable=False)
     target_node_id: Mapped[str] = mapped_column(Text, nullable=False)
     imported_names_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    edge_type: Mapped[str | None] = mapped_column(String(64), nullable=True, default="imports")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=_now_utc
     )

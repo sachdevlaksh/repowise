@@ -108,19 +108,16 @@ class TestCoChangeDetection:
         mock_repo = MagicMock()
         all_files = {"a.py", "b.py", "c.py"}
 
-        # Build 4 commits where a.py and b.py always change together.
-        # c.py only changes in 1 commit.
-        parent = MagicMock()
-        commits = []
-        for i in range(4):
-            c = _make_commit(hexsha=f"sha{i}", parents=[parent])
-            diffs = [_make_diff("a.py"), _make_diff("b.py")]
-            if i == 0:
-                diffs.append(_make_diff("c.py"))
-            c.diff.return_value = diffs
-            commits.append(c)
-
-        mock_repo.iter_commits.return_value = commits
+        # Simulate `git log --name-only --no-merges --format=%x00` output.
+        # 4 commits where a.py and b.py always change together.
+        # c.py only changes in commit 0.
+        raw_log = (
+            "\x00\na.py\nb.py\nc.py\n"  # commit 0
+            "\x00\na.py\nb.py\n"         # commit 1
+            "\x00\na.py\nb.py\n"         # commit 2
+            "\x00\na.py\nb.py\n"         # commit 3
+        )
+        mock_repo.git.log.return_value = raw_log
 
         result = indexer._compute_co_changes(mock_repo, all_files, commit_limit=500, min_count=3)
 

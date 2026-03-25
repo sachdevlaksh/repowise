@@ -479,6 +479,9 @@ async def batch_upsert_graph_edges(
             imported = edge_data.get("imported_names_json")
             if imported is not None:
                 existing.imported_names_json = imported
+            edge_type = edge_data.get("edge_type")
+            if edge_type is not None:
+                existing.edge_type = edge_type
         else:
             session.add(
                 GraphEdge(
@@ -487,6 +490,7 @@ async def batch_upsert_graph_edges(
                     source_node_id=source,
                     target_node_id=target,
                     imported_names_json=edge_data.get("imported_names_json", "[]"),
+                    edge_type=edge_data.get("edge_type", "imports"),
                 )
             )
 

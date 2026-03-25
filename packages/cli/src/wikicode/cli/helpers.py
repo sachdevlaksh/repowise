@@ -8,6 +8,8 @@ import os
 from pathlib import Path
 from typing import Any, TypeVar
 
+import click
+
 CONFIG_FILENAME = "config.yaml"
 
 from rich.console import Console
@@ -251,7 +253,3 @@ def resolve_provider(
         "No provider configured. Use --provider, set WIKICODE_PROVIDER, "
         "or set ANTHROPIC_API_KEY / OPENAI_API_KEY / OLLAMA_BASE_URL / GEMINI_API_KEY."
     )
-
-
-# Deferred import to avoid circular issues
-import click  # noqa: E402

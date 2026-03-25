@@ -28,10 +28,13 @@ from wikicode.core.ingestion.models import (
 
 
 @pytest.mark.asyncio
-async def test_git_indexer_on_sample_repo(sample_repo_path: Path) -> None:
+async def test_git_indexer_on_non_git_dir(tmp_path: Path) -> None:
     """GitIndexer on a non-git directory should return an empty summary
     without raising an exception."""
-    indexer = GitIndexer(sample_repo_path)
+    # Create a temp dir with a file so GitIndexer has something to look at,
+    # but no .git directory so it should bail out gracefully.
+    (tmp_path / "example.py").write_text("x = 1\n")
+    indexer = GitIndexer(tmp_path)
     summary, metadata = await indexer.index_repo("test-repo")
 
     assert isinstance(summary, GitIndexSummary)

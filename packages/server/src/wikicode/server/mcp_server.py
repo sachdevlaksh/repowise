@@ -15,6 +15,7 @@ import asyncio
 import json
 import os
 import os.path
+import re
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -46,6 +47,11 @@ _vector_store: Any = None
 _decision_store: Any = None
 _fts: Any = None
 _repo_path: str | None = None
+
+
+def _sanitize_mermaid_id(node_id: str) -> str:
+    """Replace all non-alphanumeric/non-underscore chars with underscore."""
+    return re.sub(r"[^a-zA-Z0-9_]", "_", node_id)
 
 
 def _resolve_embedder():
@@ -290,7 +296,11 @@ async def get_overview(repo: str | None = None) -> dict:
                 {
                     "name": p.title,
                     "path": p.target_path,
-                    "description": p.content[:200] + "..." if len(p.content) > 200 else p.content,
+                    "description": (
+                        p.content[:200].rsplit(" ", 1)[0] + "..."
+                        if len(p.content) > 200
+                        else p.content
+                    ),
                 }
                 for p in module_pages
             ],
@@ -421,7 +431,7 @@ async def _resolve_one_target(
                 select(Page).where(
                     Page.repository_id == repo_id,
                     Page.page_type == "file_page",
-                    Page.target_path.like(f"{page.target_path}%"),
+                    Page.target_path.like(f"{page.target_path}/%"),
                 )
             )
             file_pages = res.scalars().all()
@@ -962,14 +972,16 @@ async def search_codebase(
         await _get_repo(session, repo)
 
     # Try semantic search first, fall back to fulltext
+    # Over-fetch when filtering by page_type to avoid returning 0 results
+    fetch_limit = limit * 3 if page_type else limit
     results = []
     try:
-        results = await _vector_store.search(query, limit=limit)
+        results = await _vector_store.search(query, limit=fetch_limit)
     except Exception:
         pass
     if not results:
         try:
-            results = await _fts.search(query, limit=limit)
+            results = await _fts.search(query, limit=fetch_limit)
         except Exception:
             pass
 
@@ -984,11 +996,24 @@ async def search_codebase(
                 "page_type": r.page_type,
                 "snippet": r.snippet,
                 "relevance_score": r.score,
-                "confidence_score": getattr(r, "confidence", None),
+                "confidence_score": None,
             }
         )
 
-    return {"results": output[:limit]}
+    output = output[:limit]
+
+    # Batch-lookup actual page confidence scores from DB
+    if output:
+        page_ids = [item["page_id"] for item in output]
+        async with get_session(_session_factory) as session:
+            res = await session.execute(
+                select(Page.id, Page.confidence).where(Page.id.in_(page_ids))
+            )
+            conf_map = {row[0]: row[1] for row in res.all()}
+        for item in output:
+            item["confidence_score"] = conf_map.get(item["page_id"])
+
+    return {"results": output}
 
 
 # ---------------------------------------------------------------------------
@@ -1020,16 +1045,20 @@ async def get_dependency_path(
     try:
         import networkx as nx
     except ImportError:
-        return {"error": "networkx not available for path queries"}
+        return {"path": [], "distance": -1, "explanation": "networkx not available for path queries"}
 
     G = nx.DiGraph()
     for e in edges:
-        G.add_edge(e.source_node_id, e.target_node_id)
+        G.add_edge(
+            e.source_node_id,
+            e.target_node_id,
+            edge_type=getattr(e, "edge_type", None) or "imports",
+        )
 
     if source not in G:
-        return {"error": f"Source node '{source}' not found in graph"}
+        return {"path": [], "distance": -1, "explanation": f"Source node '{source}' not found in graph"}
     if target not in G:
-        return {"error": f"Target node '{target}' not found in graph"}
+        return {"path": [], "distance": -1, "explanation": f"Target node '{target}' not found in graph"}
 
     try:
         path = nx.shortest_path(G, source, target)
@@ -1041,7 +1070,8 @@ async def get_dependency_path(
     for i, node in enumerate(path):
         relationship = ""
         if i < len(path) - 1:
-            relationship = "imports"
+            next_node = path[i + 1]
+            relationship = G[node][next_node].get("edge_type", "imports")
         path_with_info.append({"node": node, "relationship": relationship})
 
     return {
@@ -1071,7 +1101,7 @@ async def get_dead_code(
     Args:
         repo: Repository path, name, or ID.
         kind: Filter by kind (unreachable_file, unused_export, unused_internal, zombie_package).
-        min_confidence: Minimum confidence threshold (default 0.6).
+        min_confidence: Minimum confidence threshold (default 0.5).
         safe_only: Only return findings marked safe_to_delete (default false).
         limit: Maximum findings to return (default 20).
     """
@@ -1090,14 +1120,12 @@ async def get_dead_code(
 
         if kind:
             query = query.where(DeadCodeFinding.kind == kind)
+        if safe_only:
+            query = query.where(DeadCodeFinding.safe_to_delete == True)  # noqa: E712
+        query = query.limit(limit)
 
         result = await session.execute(query)
         findings = list(result.scalars().all())
-
-        if safe_only:
-            findings = [f for f in findings if f.safe_to_delete]
-
-        findings = findings[:limit]
 
         # Compute summary
         all_result = await session.execute(
@@ -1198,17 +1226,22 @@ async def get_architecture_diagram(
         edges = result.scalars().all()
 
         node_ids = {n.node_id for n in nodes}
-        relevant_edges = [
-            e for e in edges
-            if e.source_node_id in node_ids or e.target_node_id in node_ids
-        ]
+        pr_map = {n.node_id: n.pagerank for n in nodes}
+        relevant_edges = sorted(
+            [
+                e for e in edges
+                if e.source_node_id in node_ids or e.target_node_id in node_ids
+            ],
+            key=lambda e: pr_map.get(e.source_node_id, 0.0),
+            reverse=True,
+        )
 
         # Build Mermaid flowchart
         lines = ["graph TD"]
         seen_nodes = set()
         for e in relevant_edges[:50]:  # Limit to 50 edges for readability
-            src = e.source_node_id.replace("/", "_").replace(".", "_").replace("-", "_")
-            tgt = e.target_node_id.replace("/", "_").replace(".", "_").replace("-", "_")
+            src = _sanitize_mermaid_id(e.source_node_id)
+            tgt = _sanitize_mermaid_id(e.target_node_id)
             if src not in seen_nodes:
                 lines.append(f'    {src}["{e.source_node_id}"]')
                 seen_nodes.add(src)

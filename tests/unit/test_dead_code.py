@@ -39,6 +39,7 @@ def _build_graph(
     """
     g = nx.DiGraph()
     for name, attrs in nodes.items():
+        attrs.setdefault("language", "python")
         g.add_node(name, **attrs)
     for edge in edges or []:
         if len(edge) == 3:

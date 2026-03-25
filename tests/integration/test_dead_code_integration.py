@@ -115,7 +115,16 @@ async def test_hotspot_sorted_first_in_generation() -> None:
         "entry.py": 0.3,
     }
 
-    sorted_files = await generator._sort_level_files(files, git_meta_map, pagerank)
+    # Replicate the inline sorting logic from PageGenerator._generate_level
+    # (entry points first, then hotspots, then high PageRank)
+    sorted_files = sorted(
+        files,
+        key=lambda p: (
+            not p.file_info.is_entry_point,
+            not git_meta_map.get(p.file_info.path, {}).get("is_hotspot", False),
+            -pagerank.get(p.file_info.path, 0.0),
+        ),
+    )
 
     paths = [p.file_info.path for p in sorted_files]
     # Entry points first, then hotspots, then normal

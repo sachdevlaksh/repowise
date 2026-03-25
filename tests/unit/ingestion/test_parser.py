@@ -574,13 +574,14 @@ class TestCppParser:
 
 class TestUnsupportedLanguage:
     def test_returns_empty_parsed_file(self, parser: ASTParser) -> None:
-        fi = _make_file_info("file.sql", "sql")
-        fi.language = "sql"
-        result = parser.parse_file(fi, b"SELECT * FROM users;")
+        """Unsupported languages return an empty ParsedFile with no errors
+        (silent passthrough by design — see parser.py line 354)."""
+        fi = _make_file_info("file.xyz", "unknown")
+        fi.language = "unknown"
+        result = parser.parse_file(fi, b"some content here")
         assert result.symbols == []
         assert result.imports == []
-        assert len(result.parse_errors) == 1
-        assert "sql" in result.parse_errors[0].lower()
+        assert result.parse_errors == []
 
 
 # ---------------------------------------------------------------------------

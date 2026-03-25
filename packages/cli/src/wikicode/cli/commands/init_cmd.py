@@ -98,6 +98,7 @@ async def _persist_index_only(
                 "source_node_id": u,
                 "target_node_id": v,
                 "imported_names_json": json.dumps(data.get("imported_names", [])),
+                "edge_type": data.get("edge_type", "imports"),
             })
         if edges:
             await batch_upsert_graph_edges(session, repo_id, edges)
@@ -692,6 +693,7 @@ def init_command(
                     "source_node_id": u,
                     "target_node_id": v,
                     "imported_names_json": json.dumps(data.get("imported_names", [])),
+                    "edge_type": data.get("edge_type", "imports"),
                 })
             if edges:
                 await batch_upsert_graph_edges(session, repo_id, edges)
@@ -746,10 +748,42 @@ def init_command(
         run_async(_persist())
 
     # ---- Step 6: State ----
+    # Query actual DB page count (not just current job's pages)
+    async def _count_db_pages() -> int:
+        from sqlalchemy import func as sa_func, select as sa_select
+
+        from wikicode.core.persistence import create_engine, create_session_factory, get_session
+        from wikicode.core.persistence.models import Page, Repository
+
+        from wikicode.cli.helpers import get_db_url_for_repo as _get_url
+
+        _engine = create_engine(_get_url(repo_path))
+        _sf = create_session_factory(_engine)
+        async with get_session(_sf) as _sess:
+            # Look up repo by local_path to get repo_id
+            repo_result = await _sess.execute(
+                sa_select(Repository.id).where(
+                    Repository.local_path == str(repo_path)
+                )
+            )
+            _repo_id = repo_result.scalar_one_or_none()
+            if _repo_id is None:
+                await _engine.dispose()
+                return len(generated_pages)  # fallback
+
+            result = await _sess.execute(
+                sa_select(sa_func.count()).select_from(Page).where(
+                    Page.repository_id == _repo_id
+                )
+            )
+            count = result.scalar_one()
+        await _engine.dispose()
+        return count
+
     head = get_head_commit(repo_path)
     state = load_state(repo_path)
     state["last_sync_commit"] = head
-    state["total_pages"] = len(generated_pages)
+    state["total_pages"] = run_async(_count_db_pages())
     state["provider"] = provider.provider_name
     state["model"] = provider.model_name
     total_tokens = sum(p.total_tokens for p in generated_pages)

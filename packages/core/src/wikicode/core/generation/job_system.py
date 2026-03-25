@@ -146,6 +146,7 @@ class JobSystem:
         if page_id not in cp.completed_page_ids:
             cp.completed_page_ids.append(page_id)
             cp.completed_pages = len(cp.completed_page_ids)
+            cp.total_pages = max(cp.total_pages, cp.completed_pages)
         cp.updated_at = _now_iso()
         self._save(cp)
 

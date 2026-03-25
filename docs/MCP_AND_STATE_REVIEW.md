@@ -554,12 +554,12 @@ files that are actively being changed but have no documented architectural decis
 |---|-------|----------|-------------|
 | M1 | **MockEmbedder in MCP server** (FIXED) | `mcp_server.py:82-83` | Always created `MockEmbedder()`. Fixed 2026-03-25: added `_resolve_embedder()` that checks `WIKICODE_EMBEDDER` env var and `.wikicode/config.yaml` for real embedder (gemini/openai). |
 | M2 | **CLI semantic search broken** (FIXED) | `search_cmd.py:60-69` | Created empty `InMemoryVectorStore`. Fixed 2026-03-25: now tries LanceDB from `.wikicode/lancedb/` first, falls back to FTS. |
-| M3 | `state.json` total_pages wrong | `init_cmd.py:744` | `state["total_pages"] = len(generated_pages)` only counts last job. Multiple runs accumulate pages in DB but state only reflects latest. |
-| M4 | Missing `edge_type` in graph DB | `persistence/models.py` | `graph_edges` table has no `edge_type` column. Architecture describes rich edge types but they're not persisted. MCP tool hardcodes "imports". |
+| M3 | **`state.json` total_pages wrong** (FIXED) | `init_cmd.py:744` | `state["total_pages"] = len(generated_pages)` only counts last job. Fixed 2026-03-25: now queries actual DB page count via `SELECT COUNT(*)` after persistence. |
+| M4 | **Missing `edge_type` in graph DB** (FIXED) | `persistence/models.py` | `graph_edges` table had no `edge_type` column. Fixed 2026-03-25: added `edge_type` column (Alembic migration 0004), CRUD layer, init_cmd persistence, and MCP server now uses real edge types in `get_dependency_path`. |
 | M5 | **Missing `repo_path` in update** (FIXED) | `update_cmd.py:87` | `resolve_provider(provider_name, model)` was missing `repo_path`. Fixed 2026-03-25: now passes `repo_path=repo_path`. |
 | M6 | ~~`get_repo_structure()` arg mismatch~~ (NOT A BUG) | `update_cmd.py:97` | The `files` parameter is optional (`files: list[FileInfo] | None = None`). Calling without args triggers a fresh traversal. |
-| M7 | `wikicode-server` not auto-installed | `Makefile` / README | Running `wikicode mcp` fails with `ModuleNotFoundError` unless server package is explicitly installed. Not documented. |
-| M8 | `completed_pages > total_pages` | `job_system.py` | Multiple jobs show completed exceeding total. The total estimate is not updated as levels are processed. |
+| M7 | **`wikicode-server` not auto-installed** (FIXED) | `packages/cli/pyproject.toml` | Fixed 2026-03-25: added `wikicode-server` as explicit dependency of `wikicode-cli` with workspace source. |
+| M8 | **`completed_pages > total_pages`** (FIXED) | `job_system.py` | Fixed 2026-03-25: `complete_page()` now clamps `total_pages = max(total_pages, completed_pages)`. |
 | M9 | **`search_codebase` returns empty** (FIXED) | `mcp_server.py`, `search.py`, `init_cmd.py` | Fixed: (a) FTS fallback triggers on empty results not just exceptions, (b) FTS query builder strips stop words and uses OR + prefix matching, (c) `init_cmd.py` now uses LanceDB when available, (d) added `wikicode reindex` command. LanceDB indexed with 721 pages + 23 decisions via Gemini embedder. |
 | M10 | **Co-change counts all zero** (FIXED) | `mcp_server.py` | Root cause: key mismatch — data stores `"co_change_count"` but MCP tools read `"count"`. Fixed 2026-03-25: tools now check both keys via `p.get("co_change_count", p.get("count", 0))`. |
 | M11 | **`get_why` excludes all decisions** (FIXED) | `mcp_server.py:1155-1156` | `include_proposed=False` returned 0 results. Fixed 2026-03-25: changed to `include_proposed=True`. |
@@ -569,17 +569,17 @@ files that are actively being changed but have no documented architectural decis
 | # | Issue | Location | Description |
 |---|-------|----------|-------------|
 | m1 | **HTML export doesn't render markdown** (FIXED) | `export_cmd.py:118-127` | Wrapped content in `<pre>`. Fixed 2026-03-25: now renders via `markdown` or `mistune` library, falls back to `<pre>`. |
-| m2 | Failed page IDs are level names | Job JSON files | `"level-1"` used as failed page ID instead of actual page identifier. |
-| m3 | Module description truncation | `mcp_server.py:231` | `content[:200]` with no word-boundary awareness. |
+| m2 | Failed page IDs are level names | Job JSON files | `"level-1"` used as failed page ID instead of actual page identifier. Investigation shows `fail_page()` receives actual page IDs — the "level name" was a display callback, not a data bug. |
+| m3 | **Module description truncation** (FIXED) | `mcp_server.py:293` | Fixed 2026-03-25: added parentheses to fix operator precedence bug (was duplicating content), and added `rsplit(" ", 1)[0]` for word-boundary awareness. |
 | m4 | Graph nodes only `file` type | DB audit | Architecture describes symbol/package/external nodes but only file nodes are persisted. |
 | m5 | **No startup validation in MCP** (FIXED) | `mcp_server.py:50-108` | Server started silently. Fixed 2026-03-25: added warning logs when `.wikicode/` or `wiki.db` is missing. |
-| m6 | `click` import at bottom of file | `helpers.py:257` | Deferred import is confusing though functional. |
+| m6 | **`click` import at bottom of file** (FIXED) | `helpers.py:257` | Fixed 2026-03-25: moved `import click` to top of file with other imports. |
 | m7 | Ownership grouping too coarse | `mcp_server.py:858` | Groups by first directory only — too coarse for nested monorepos. |
-| m8 | Architecture diagram edge limit | `mcp_server.py:561` | Dynamic diagrams capped at 50 edges with no prioritization strategy. |
+| m8 | **Architecture diagram edge limit** (FIXED) | `mcp_server.py` | Fixed 2026-03-25: edges now sorted by source node PageRank before 50-edge cap, plus Mermaid node ID sanitization improved to use regex for all non-alphanumeric chars. |
 | m9 | All decisions are "proposed" | DB content | No inline markers found — all 23 are auto-extracted. Expected but worth noting. |
 | m10 | **`_decision_store` may be empty InMemory** (FIXED) | `mcp_server.py:103-104` | Fixed: `wikicode reindex` now indexes 23 decision records into LanceDB `decision_records` table. MCP server loads this on startup when `.wikicode/lancedb/` exists. |
 | m11 | **`get_dead_code` default hides zombies** (FIXED) | `mcp_server.py:982` | Default `min_confidence` was 0.6, hiding 0.5-confidence zombie findings. Fixed 2026-03-25: lowered default to 0.5. |
-| m12 | `wikicode-server` not installed by default | `Makefile` / setup | Running `wikicode mcp` fails with `ModuleNotFoundError` unless server package is explicitly installed. Not documented in quick-start. |
+| m12 | **`wikicode-server` not installed by default** (FIXED) | `packages/cli/pyproject.toml` | Fixed 2026-03-25: same as M7 — `wikicode-server` is now a declared dependency of `wikicode-cli`. |
 
 ---
 
@@ -642,27 +642,41 @@ files that are actively being changed but have no documented architectural decis
 
 ### Immediate Fixes (before next release)
 
-1. **Fix LanceDB filter injection** — escape or parameterize `page_id` in delete operations
-2. **Fix MCP embedder** — resolve real embedder from `.wikicode/config.yaml` instead of always using MockEmbedder
-3. **Fix `update_cmd.py`** — pass `repo_path` to `resolve_provider()`
-4. **Install wikicode-server in Makefile** — add to default `make install` target
-5. **Update tool count** — change "13" to "16" in all docstrings and add decision tools to ARCHITECTURE.md table
+1. ~~**Fix LanceDB filter injection**~~ — DONE (C2)
+2. ~~**Fix MCP embedder**~~ — DONE (M1)
+3. ~~**Fix `update_cmd.py`**~~ — DONE (M5)
+4. ~~**Install wikicode-server in Makefile**~~ — DONE (M7): added as dependency in `packages/cli/pyproject.toml`
+5. ~~**Update tool count**~~ — DONE (C3): updated to 8 tools everywhere
 
 ### Short-term Improvements
 
-6. **Add `edge_type` to `graph_edges`** — persist relationship types from GraphBuilder
-7. **Persist non-file graph nodes** — symbols, packages, external nodes
-8. **Fix `total_pages` tracking** — use DB count, not last job count
-9. **Fix CLI semantic search** — load LanceDB from `.wikicode/lancedb/` directory
-10. **Fix HTML export** — use a markdown renderer (e.g., `markdown` or `mistune`)
+6. ~~**Add `edge_type` to `graph_edges`**~~ — DONE (M4): Alembic migration 0004, CRUD, init_cmd, MCP server
+7. **Persist non-file graph nodes** — symbols, packages, external nodes (still open)
+8. ~~**Fix `total_pages` tracking**~~ — DONE (M3): now queries DB count
+9. ~~**Fix CLI semantic search**~~ — DONE (M2)
+10. ~~**Fix HTML export**~~ — DONE (m1)
 
 ### Architecture Improvements (longer term)
 
 11. **Lazy graph loading in MCP** — don't load all edges per `get_dependency_path` call
-12. **Configurable ownership depth** — support nested module grouping
-13. **MCP startup validation** — warn/fail if wiki.db is missing
+12. **Configurable ownership depth** — support nested module grouping (m7 still open)
+13. ~~**MCP startup validation**~~ — DONE (m5)
 14. **Database-backed job system** — replace JSON checkpointing with SQL
 15. **Rate limiter starvation guard** — add max-wait timeout
+
+### Additional fixes applied 2026-03-25 (second pass)
+
+- **`search_codebase` page_type filter** — over-fetch (3x limit) when filtering by page_type to avoid returning 0 results
+- **`search_codebase` confidence_score** — batch-lookup `Page.confidence` from DB instead of always returning None
+- **`get_dependency_path` error consistency** — all error cases now return `{"path": [], "distance": -1, "explanation": "..."}`
+- **`get_dead_code` docstring** — corrected default from 0.6 to 0.5
+- **`get_dead_code` safe_only** — moved filter to SQL WHERE clause for efficiency
+- **`get_context` module LIKE prefix** — added trailing `/` to prevent `src/auth` matching `src/auth_helpers`
+- **`get_overview` operator precedence** — fixed content duplication bug with parentheses + word-boundary truncation
+- **Architecture diagram sanitization** — regex-based `_sanitize_mermaid_id()` replaces all non-alphanumeric chars
+- **Architecture diagram prioritization** — edges sorted by source node PageRank before 50-edge cap
+- **`completed_pages > total_pages`** — `complete_page()` now clamps total to max(total, completed)
+- **6 pre-existing test failures fixed** — dead_code, git_indexer, parser, cost_estimator, registry, gemini_provider tests
 
 ---
 

@@ -114,5 +114,5 @@ class TestCustomProviderRegistration:
         assert received.get("api_key") == "key-123"
 
     def test_builtin_count(self) -> None:
-        """Sanity check: we have exactly 5 built-in providers."""
-        assert len(_BUILTIN_PROVIDERS) == 5
+        """Sanity check: we have exactly 6 built-in providers."""
+        assert len(_BUILTIN_PROVIDERS) == 6

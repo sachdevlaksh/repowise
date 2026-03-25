@@ -16,7 +16,7 @@ For per-package detail (installation, full API reference, all CLI flags, file ma
 |---------|--------|----------------|
 | `packages/core` | [`packages/core/README.md`](../packages/core/README.md) | Ingestion, generation, persistence, providers — all key classes with code examples |
 | `packages/cli` | [`packages/cli/README.md`](../packages/cli/README.md) | All 10 CLI commands with every flag documented |
-| `packages/server` | [`packages/server/README.md`](../packages/server/README.md) | All REST API endpoints, 16 MCP tools, webhook setup, scheduler jobs |
+| `packages/server` | [`packages/server/README.md`](../packages/server/README.md) | All REST API endpoints, 8 MCP tools, webhook setup, scheduler jobs |
 | `packages/web` | [`packages/web/README.md`](../packages/web/README.md) | Every frontend file with purpose — API client, hooks, components, pages |
 
 ---

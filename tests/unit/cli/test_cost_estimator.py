@@ -53,6 +53,7 @@ class FakeConfig:
     top_symbol_percentile: float = 0.10
     file_page_top_percentile: float = 0.20
     file_page_min_symbols: int = 1
+    max_pages_pct: float = 0.10
 
 
 def _make_graph_builder(files: list[FakeParsedFile]):

@@ -862,7 +862,9 @@ async def test_get_dependency_path_node_not_found(setup_mcp):
     from wikicode.server.mcp_server import get_dependency_path
 
     result = await get_dependency_path("nonexistent.py", "src/auth/service.py")
-    assert "error" in result
+    assert result["distance"] == -1
+    assert result["path"] == []
+    assert "not found" in result["explanation"]
 
 
 # ---- Tool 8: get_dead_code ----

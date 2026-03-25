@@ -97,6 +97,9 @@ async def test_generate_token_counts():
 
 
 async def test_generate_passes_max_tokens():
+    """max_output_tokens is intentionally omitted in the Gemini config
+    (flash models default to 65k which is better for doc generation).
+    Verify the config is created but max_output_tokens is not set."""
     provider = GeminiProvider(api_key="fake-key")
     mock_response = _make_mock_response()
     captured: list = []
@@ -109,7 +112,8 @@ async def test_generate_passes_max_tokens():
         MockClient.return_value.models.generate_content.side_effect = fake_generate_content
         await provider.generate("sys", "user", max_tokens=1234)
 
-    assert captured[0].max_output_tokens == 1234
+    # max_output_tokens intentionally omitted — Gemini flash models default to 65k
+    assert captured[0].max_output_tokens is None
 
 
 # ---------------------------------------------------------------------------
