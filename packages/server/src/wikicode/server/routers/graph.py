@@ -620,7 +620,11 @@ async def dependency_path(
     target: str = Query(..., alias="to", description="Target node ID"),
     session: AsyncSession = Depends(get_db_session),
 ) -> dict:
-    """Find the shortest dependency path between two nodes."""
+    """Find the shortest dependency path between two nodes.
+
+    When no direct path exists, returns visual context with nearest common
+    ancestors, shared neighbors, and bridge suggestions.
+    """
     repo = await crud.get_repository(session, repo_id)
     if repo is None:
         raise HTTPException(status_code=404, detail="Repository not found")
@@ -629,6 +633,11 @@ async def dependency_path(
         select(GraphEdge).where(GraphEdge.repository_id == repo_id)
     )
     edges = edge_result.scalars().all()
+
+    node_result = await session.execute(
+        select(GraphNode).where(GraphNode.repository_id == repo_id)
+    )
+    nodes = node_result.scalars().all()
 
     try:
         import networkx as nx
@@ -647,7 +656,13 @@ async def dependency_path(
     try:
         path = nx.shortest_path(G, source, target)
     except nx.NetworkXNoPath:
-        return {"path": [], "distance": -1, "explanation": "No path found"}
+        from wikicode.server.mcp_server import _build_visual_context
+        return {
+            "path": [],
+            "distance": -1,
+            "explanation": "No direct dependency path found",
+            "visual_context": _build_visual_context(G, source, target, nodes, nx),
+        }
 
     return {
         "path": path,

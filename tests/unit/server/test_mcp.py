@@ -856,6 +856,25 @@ async def test_get_dependency_path_no_path(setup_mcp):
     assert result["distance"] == -1
     assert result["path"] == []
 
+    # Visual context should be present
+    ctx = result["visual_context"]
+    assert ctx is not None
+
+    # Reverse path exists (middleware -> service -> models)
+    assert ctx["reverse_path"]["exists"] is True
+
+    # Nearest common ancestor should be service.py (connects both via undirected)
+    ancestors = ctx["nearest_common_ancestors"]
+    assert len(ancestors) >= 1
+    assert ancestors[0]["node"] == "src/auth/service.py"
+
+    # Community analysis — models is community 2, middleware is community 1
+    assert ctx["community"]["same_community"] is False
+
+    # Not disconnected — they are reachable in undirected graph
+    assert ctx["disconnected"] is False
+    assert "suggestion" in ctx
+
 
 @pytest.mark.asyncio
 async def test_get_dependency_path_node_not_found(setup_mcp):

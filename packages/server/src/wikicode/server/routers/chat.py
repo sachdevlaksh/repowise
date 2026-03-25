@@ -462,7 +462,15 @@ def _build_tool_summary(tool_name: str, result: dict[str, Any]) -> str:
 
     if tool_name == "get_dependency_path":
         dist = result.get("distance", -1)
-        return f"Path found (distance: {dist})" if dist >= 0 else "No path found"
+        if dist >= 0:
+            return f"Path found (distance: {dist})"
+        ctx = result.get("visual_context", {})
+        ancestors = ctx.get("nearest_common_ancestors", [])
+        if ancestors:
+            return f"No direct path — nearest bridge: {ancestors[0]['node']}"
+        if ctx.get("disconnected"):
+            return "No path — nodes are in separate dependency clusters"
+        return "No direct path found"
 
     if tool_name == "get_dead_code":
         summary = result.get("summary", {})

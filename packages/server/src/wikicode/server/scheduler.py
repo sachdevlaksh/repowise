@@ -84,14 +84,17 @@ def setup_scheduler(
                     # NOTE: when a full sync is implemented here, pass
                     #   extra_exclude_patterns=repo.settings.get("exclude_patterns", [])
                     # to FileTraverser so user-configured exclusions are respected.
+                    import json as _json
+                    try:
+                        _settings = _json.loads(repo.settings_json) if repo.settings_json else {}
+                    except Exception:
+                        _settings = {}
                     logger.debug(
                         "polling_check",
                         extra={
                             "repo_id": repo.id,
                             "head_commit": repo.head_commit,
-                            "exclude_patterns": repo.settings.get("exclude_patterns", [])
-                            if repo.settings
-                            else [],
+                            "exclude_patterns": _settings.get("exclude_patterns", []),
                         },
                     )
         except Exception:

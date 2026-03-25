@@ -111,7 +111,7 @@ _TOOL_SCHEMAS: list[dict[str, Any]] = [
     },
     {
         "name": "get_dependency_path",
-        "description": "Find the shortest dependency path between two files or modules in the codebase graph.",
+        "description": "Find the shortest dependency path between two files or modules. When no direct path exists, returns visual context: nearest common ancestors, shared neighbors, community analysis, and bridge suggestions.",
         "parameters": {
             "type": "object",
             "properties": {

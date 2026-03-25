@@ -109,3 +109,10 @@ async def test_dependency_path_no_path(client: AsyncClient, app) -> None:
     assert resp.status_code == 200
     data = resp.json()
     assert data["distance"] == -1  # No reverse path
+
+    # Visual context should be returned
+    ctx = data["visual_context"]
+    assert ctx is not None
+    assert ctx["reverse_path"]["exists"] is True  # main -> utils exists
+    assert ctx["disconnected"] is False
+    assert "suggestion" in ctx
