@@ -158,7 +158,7 @@ _MAX_BLAME_SIZE_BYTES: int = 100 * 1024  # 100 KB
 # Maximum seconds to wait for a single file's git indexing.  If exceeded the
 # file is recorded with whatever data was collected before the timeout and the
 # semaphore slot is released so other files can proceed.
-_FILE_INDEX_TIMEOUT_SECS: float = 30.0
+_FILE_INDEX_TIMEOUT_SECS: float = 90.0
 
 
 def _should_skip_index(file_path: str) -> bool:
