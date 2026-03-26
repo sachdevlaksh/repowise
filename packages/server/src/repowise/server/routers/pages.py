@@ -29,7 +29,7 @@ async def list_pages(
     page_type: str | None = Query(None, description="Filter by page type"),
     sort_by: str = Query("updated_at", description="Sort field: updated_at, confidence, created_at"),
     order: str = Query("desc", description="Sort order: asc or desc"),
-    limit: int = Query(100, ge=1, le=500),
+    limit: int = Query(100, ge=1, le=5000),
     offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_db_session),
 ) -> list[PageResponse]:

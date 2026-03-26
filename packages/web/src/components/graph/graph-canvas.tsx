@@ -117,6 +117,7 @@ export interface GraphCanvasProps {
   hops?: number;
   days?: number;
   onNodeClick?: (nodeId: string) => void;
+  onNodeViewDocs?: (nodeId: string) => void;
   onViewChange?: (view: ViewMode) => void;
 }
 
@@ -127,6 +128,7 @@ export function GraphCanvas({
   hops = 2,
   days = 30,
   onNodeClick,
+  onNodeViewDocs,
   onViewChange,
 }: GraphCanvasProps) {
   const router = useRouter();
@@ -616,11 +618,12 @@ export function GraphCanvas({
         if (viewMode === "module") {
           onNodeClick?.(closest.node_id);
         } else {
-          router.push(`/repos/${repoId}/wiki/${encodeURIComponent(closest.node_id)}`);
+          // Open doc panel for the clicked node
+          onNodeViewDocs?.(closest.node_id);
         }
       }
     },
-    [filters, router, repoId, viewMode, onNodeClick],
+    [filters, viewMode, onNodeClick, onNodeViewDocs],
   );
 
   const isLoading =

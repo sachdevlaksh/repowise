@@ -4,14 +4,16 @@ import { Bot, User } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { ToolCallBlock } from "./tool-call-block";
 import { ChatMarkdown } from "./chat-markdown";
+import { SourceCitations } from "./source-citations";
 import type { ChatMessage as ChatMessageType } from "@/lib/hooks/use-chat";
 
 interface ChatMessageProps {
   message: ChatMessageType;
+  repoId: string;
   onViewArtifact?: (artifact: { type: string; data: Record<string, unknown> }) => void;
 }
 
-export function ChatMessage({ message, onViewArtifact }: ChatMessageProps) {
+export function ChatMessage({ message, repoId, onViewArtifact }: ChatMessageProps) {
   const isUser = message.role === "user";
 
   return (
@@ -71,6 +73,11 @@ export function ChatMessage({ message, onViewArtifact }: ChatMessageProps) {
               <div className="prose-chat">
                 <ChatMarkdown content={message.text} />
               </div>
+            )}
+
+            {/* Source citations */}
+            {!message.isStreaming && message.toolCalls.length > 0 && (
+              <SourceCitations toolCalls={message.toolCalls} repoId={repoId} />
             )}
 
             {/* Streaming cursor */}

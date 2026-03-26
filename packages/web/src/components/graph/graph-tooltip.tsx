@@ -1,3 +1,4 @@
+import { FileText } from "lucide-react";
 import { formatNumber } from "@/lib/utils/format";
 import type { GraphNodeResponse } from "@/lib/api/types";
 
@@ -10,8 +11,8 @@ interface GraphTooltipProps {
 }
 
 export function GraphTooltip({ node, x, y, canvasWidth, canvasHeight }: GraphTooltipProps) {
-  const tooltipW = 200;
-  const tooltipH = 130;
+  const tooltipW = 220;
+  const tooltipH = 150;
   const left = x + 16 + tooltipW > canvasWidth ? x - tooltipW - 8 : x + 16;
   const top = y + tooltipH > canvasHeight ? y - tooltipH : y;
 
@@ -51,6 +52,11 @@ export function GraphTooltip({ node, x, y, canvasWidth, canvasHeight }: GraphToo
             Entry Point
           </span>
         )}
+      </div>
+      {/* Hint for clicking */}
+      <div className="mt-2 pt-2 border-t border-[var(--color-border-default)]/50 flex items-center gap-1.5 text-[10px] text-[var(--color-text-tertiary)]">
+        <FileText className="h-3 w-3" />
+        <span>Click to view docs</span>
       </div>
     </div>
   );

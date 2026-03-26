@@ -42,6 +42,7 @@ const GLOBAL_NAV: NavItem[] = [
 function repoNavItems(repoId: string): NavItem[] {
   return [
     { label: "Chat", href: `/repos/${repoId}`, icon: MessageSquare },
+    { label: "Docs", href: `/repos/${repoId}/docs`, icon: BookOpen },
     { label: "Search", href: `/repos/${repoId}/search`, icon: Search },
     { label: "Graph", href: `/repos/${repoId}/graph`, icon: GitBranch },
     { label: "Symbols", href: `/repos/${repoId}/symbols`, icon: Code2 },

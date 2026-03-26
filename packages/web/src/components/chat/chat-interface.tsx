@@ -180,6 +180,7 @@ export function ChatInterface({ repoId, repoName }: ChatInterfaceProps) {
                 <ChatMessage
                   key={m.id}
                   message={m}
+                  repoId={repoId}
                   onViewArtifact={handleViewArtifact}
                 />
               ))}

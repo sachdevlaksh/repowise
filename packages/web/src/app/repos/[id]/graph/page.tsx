@@ -1,10 +1,11 @@
 "use client";
 
-import { use, useCallback } from "react";
+import { use, useCallback, useState } from "react";
 import { useQueryState, parseAsString, parseAsInteger } from "nuqs";
 import { GraphCanvas, type ViewMode } from "@/components/graph/graph-canvas";
 import { GraphViewSwitcher } from "@/components/graph/graph-view-switcher";
 import { GraphEgoSidebar } from "@/components/graph/graph-ego-sidebar";
+import { GraphDocPanel } from "@/components/graph/graph-doc-panel";
 import { useEgoGraph } from "@/lib/hooks/use-graph";
 import { searchNodes } from "@/lib/api/graph";
 
@@ -19,6 +20,7 @@ export default function GraphPage({
   const [node, setNode] = useQueryState("node");
   const [hops, setHops] = useQueryState("hops", parseAsInteger.withDefault(2));
   const [days, setDays] = useQueryState("days", parseAsInteger.withDefault(30));
+  const [docNodeId, setDocNodeId] = useState<string | null>(null);
 
   const viewMode = view as ViewMode;
 
@@ -62,6 +64,10 @@ export default function GraphPage({
     [viewMode, repoId, setView, setNode],
   );
 
+  const handleNodeViewDocs = useCallback((nodeId: string) => {
+    setDocNodeId((prev) => (prev === nodeId ? null : nodeId));
+  }, []);
+
   return (
     <div className="flex flex-col h-screen">
       {/* Header */}
@@ -101,15 +107,25 @@ export default function GraphPage({
             hops={hops}
             days={days}
             onNodeClick={(nodeId) => void handleNodeClick(nodeId)}
+            onNodeViewDocs={handleNodeViewDocs}
             onViewChange={(v) => void setView(v)}
           />
 
           {/* Ego sidebar */}
-          {viewMode === "ego" && egoGraph && (
+          {viewMode === "ego" && egoGraph && !docNodeId && (
             <GraphEgoSidebar
               graph={egoGraph}
               onClose={() => void setView("module")}
               onNavigateToNode={(nodeId) => void setNode(nodeId)}
+            />
+          )}
+
+          {/* Doc panel */}
+          {docNodeId && (
+            <GraphDocPanel
+              repoId={repoId}
+              nodeId={docNodeId}
+              onClose={() => setDocNodeId(null)}
             />
           )}
         </div>
