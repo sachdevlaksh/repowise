@@ -58,16 +58,13 @@ dependencies = [
     "gitpython>=3.1,<4",
     # YAML parsing (OpenAPI handler)
     "pyyaml>=6.0,<7",
+    # Gemini provider + embedder
+    "google-genai>=1.0,<2",
+    # Vector search (LanceDB — pure Python wheel, no C++ build tools)
+    "lancedb>=0.12,<1",
 ]
 
 [project.optional-dependencies]
-# Vector search (LanceDB backend — default for SQLite deployments).
-# Pure Python wheel; no C++ build tools required.
-# Install with: uv pip install repowise-core[search]
-# Added in Phase 4 of the build plan.
-search = [
-    "lancedb>=0.12,<1",
-]
 # pgvector backend — only needed when DATABASE_URL is PostgreSQL.
 # Install with: uv pip install repowise-core[pgvector]
 pgvector = [

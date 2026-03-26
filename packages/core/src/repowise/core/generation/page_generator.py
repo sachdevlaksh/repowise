@@ -478,7 +478,7 @@ class PageGenerator:
                                     },
                                 )
                             except Exception as e:
-                                log.warning("rag.embed_failed", page_id=result.page_id, error=str(e))
+                                log.debug("rag.embed_failed", page_id=result.page_id, error=str(e))
                         # Store summary for dependency context (B2)
                         if isinstance(result, GeneratedPage):
                             completed_page_summaries[result.target_path] = _extract_summary(result.content)
@@ -782,7 +782,7 @@ class PageGenerator:
                         if r.page_id != self_id
                     ]
                 except Exception as e:
-                    log.warning("rag.search_failed", path=parsed.file_info.path, error=str(e))
+                    log.debug("rag.search_failed", path=parsed.file_info.path, error=str(e))
         user_prompt = self._render("file_page.j2", ctx=ctx)
         response = await self._call_provider("file_page", user_prompt, str(uuid.uuid4()))
         return self._build_generated_page(
