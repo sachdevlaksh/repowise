@@ -85,16 +85,52 @@ _TOKEN_HEURISTICS: dict[str, tuple[int, int]] = {
     "infra_page": (2000, 1500),
 }
 
-# Cost per 1K tokens (input, output) by model prefix
-_COST_TABLE: dict[str, tuple[float, float]] = {
-    "claude": (0.003, 0.015),
-    "gpt-4o": (0.005, 0.015),
-    "gpt-4": (0.03, 0.06),
-    "gpt-3.5": (0.0005, 0.0015),
-    "gemini": (0.0001, 0.0004),
-    "llama": (0.0, 0.0),
-    "mock": (0.0, 0.0),
+# Cost per 1K tokens (input, output).
+# Exact model names are checked first; prefix fallbacks catch unknown variants.
+_COST_TABLE_EXACT: dict[str, tuple[float, float]] = {
+    # OpenAI GPT-5.4 family (prices per MTok → divide by 1000 for per-1K)
+    "gpt-5.4":          (0.0025,   0.015),    # $2.50/$15 per MTok
+    "gpt-5.4-mini":     (0.00075,  0.0045),   # $0.75/$4.50 per MTok
+    "gpt-5.4-nano":     (0.0002,   0.00125),  # $0.20/$1.25 per MTok
+    # Gemini family
+    "gemini-3.1-pro-preview":        (0.002,    0.012),   # $2/$12 per MTok
+    "gemini-3-flash-preview":        (0.0005,   0.003),   # $0.50/$3 per MTok
+    "gemini-3.1-flash-lite-preview": (0.00025,  0.0015),  # $0.25/$1.50 per MTok
+    # Anthropic Claude 4.x family
+    "claude-opus-4-6":   (0.005,  0.025),  # $5/$25 per MTok
+    "claude-sonnet-4-6": (0.003,  0.015),  # $3/$15 per MTok
+    "claude-haiku-4-5":  (0.001,  0.005),  # $1/$5 per MTok
 }
+
+# Prefix fallbacks for unknown model variants
+_COST_TABLE_PREFIX: dict[str, tuple[float, float]] = {
+    "gpt-5.4-nano":  (0.0002,  0.00125),
+    "gpt-5.4-mini":  (0.00075, 0.0045),
+    "gpt-5.4":       (0.0025,  0.015),
+    "claude-opus":   (0.005,   0.025),
+    "claude-sonnet": (0.003,   0.015),
+    "claude-haiku":  (0.001,   0.005),
+    "claude":        (0.003,   0.015),
+    "gemini":        (0.00025, 0.0015),
+    "llama":         (0.0,     0.0),
+    "mock":          (0.0,     0.0),
+}
+
+
+def _lookup_cost(model_name: str) -> tuple[float, float]:
+    """Return (input_rate, output_rate) per 1K tokens for a model."""
+    lower = model_name.lower()
+    # Exact match first
+    if lower in _COST_TABLE_EXACT:
+        return _COST_TABLE_EXACT[lower]
+    # Longest matching prefix wins
+    best_prefix = ""
+    best_rates = (0.0, 0.0)
+    for prefix, rates in _COST_TABLE_PREFIX.items():
+        if lower.startswith(prefix) and len(prefix) > len(best_prefix):
+            best_prefix = prefix
+            best_rates = rates
+    return best_rates
 
 
 def build_generation_plan(
@@ -231,13 +267,7 @@ def estimate_cost(
         total_input += inp * plan.count
         total_output += out * plan.count
 
-    # Find cost rates
-    input_rate, output_rate = 0.0, 0.0
-    model_lower = model_name.lower()
-    for prefix, rates in _COST_TABLE.items():
-        if prefix in model_lower:
-            input_rate, output_rate = rates
-            break
+    input_rate, output_rate = _lookup_cost(model_name)
 
     cost = (total_input / 1000) * input_rate + (total_output / 1000) * output_rate
 

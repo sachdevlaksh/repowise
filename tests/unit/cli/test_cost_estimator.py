@@ -169,6 +169,6 @@ class TestEstimateCost:
             PageTypePlan("file_page", 5, 2),
             PageTypePlan("repo_overview", 1, 6),
         ]
-        est = estimate_cost(plans, "openai", "gpt-4o")
+        est = estimate_cost(plans, "openai", "gpt-5.4-nano")
         assert est.total_pages == 8
         assert est.estimated_cost_usd > 0
